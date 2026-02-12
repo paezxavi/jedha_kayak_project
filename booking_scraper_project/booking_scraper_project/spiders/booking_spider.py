@@ -14,50 +14,45 @@ class BookingSpider(scrapy.Spider):
     def start_requests(self):
         # Calculate dates
         today = datetime.date.today()
-        today_str = today.strftime('%Y-%m-%d')
-        delta_days = datetime.timedelta(days=4)
-        future_date = today + delta_days
-        future_date_str = future_date.strftime('%Y-%m-%d')
+        # Shift to next month (e.g. +30 days) to find more availability
+        checkin_date = today + datetime.timedelta(days=30)
+        checkout_date = checkin_date + datetime.timedelta(days=5)
+        
+        checkin_str = checkin_date.strftime('%Y-%m-%d')
+        checkout_str = checkout_date.strftime('%Y-%m-%d')
 
         cities = []
         
-        # Check if 'city' or 'cities' argument was passed via command line (-a city=Paris)
-        if hasattr(self, 'city'):
-             cities = [self.city]
-        elif hasattr(self, 'cities'):
-             cities = self.cities.split(',')
-        else:
-            # Ensure correct path to CSV (assuming it's in the project root)
+        # Ensure correct path to CSV (assuming it's in the project root)
+        try:
+            # When running 'scrapy crawl', the CWD is the project root
+            with open('cities_with_geoposition.csv', mode='r', encoding='utf-8') as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    cities.append(row['city'])
+        except FileNotFoundError:
             try:
-                # When running 'scrapy crawl', the CWD is the project root
-                with open('cities_with_geoposition.csv', mode='r', encoding='utf-8') as f:
-                    reader = csv.DictReader(f)
-                    for row in reader:
-                        cities.append(row['city'])
-            except FileNotFoundError:
-                try:
-                    # Fallback if running from a different directory
-                    with open('../cities_with_geoposition.csv', mode='r', encoding='utf-8') as f:
-                         reader = csv.DictReader(f)
-                         for row in reader:
+                # Fallback if running from a different directory
+                with open('../../cities_with_geoposition.csv', mode='r', encoding='utf-8') as f:
+                        reader = csv.DictReader(f)
+                        for row in reader:
                             cities.append(row['city'])
-                except FileNotFoundError:
-                    print("CSV file not found, using default cities.")
-                    cities = ["Mont Saint Michel", "St Malo", "Bayeux", "Le Havre", "Rouen", "Paris", "Amiens", "Lille", "Strasbourg", "Chateau du Haut Koenigsbourg", "Colmar", "Eguisheim", "Besancon", "Dijon", "Annecy", "Grenoble", "Lyon", "Gorges du Verdon", "Bormes les Mimosas", "Cassis", "Marseille", "Aix en Provence", "Avignon", "Uzes", "Nimes", "Aigues Mortes", "Saintes Maries de la mer", "Collioure", "Carcassonne", "Ariege", "Toulouse", "Montauban", "Biarritz", "Bayonne", "La Rochelle"]
+            except FileNotFoundError:
+                print("CSV file not found, using default cities.")
+                cities = ["Mont Saint Michel", "St Malo", "Bayeux", "Le Havre", "Rouen", "Paris", "Amiens", "Lille", "Strasbourg", "Chateau du Haut Koenigsbourg", "Colmar", "Eguisheim", "Besancon", "Dijon", "Annecy", "Grenoble", "Lyon", "Gorges du Verdon", "Bormes les Mimosas", "Cassis", "Marseille", "Aix en Provence", "Avignon", "Uzes", "Nimes", "Aigues Mortes", "Saintes Maries de la mer", "Collioure", "Carcassonne", "Ariege", "Toulouse", "Montauban", "Biarritz", "Bayonne", "La Rochelle"]
 
         print(f"Starting crawl for {len(cities)} cities: {cities}")
 
         for city in cities:
-            params = {"ss": city, "lang": "fr", "checkin": today_str, "checkout": future_date_str}
+            params = {"ss": city, "lang": "fr", "checkin": checkin_str, "checkout": checkout_str}
             # Properly encode parameters for URL
             query_string = urllib.parse.urlencode(params)
             url = f"https://www.booking.com/searchresults.en-gb.html?{query_string}"
             
-            yield scrapy.Request(url, callback=self.parse, cb_kwargs={'city': city})
+            yield scrapy.Request(url, callback=self.parse, cb_kwargs={'city': city}, meta={"playwright": True})
     
 
-    # Callback function that will be called when starting your spider
-    def parse(self, response, city):
+    async def parse(self, response, city):
         self.log(f"Parsing results for {city} - Status: {response.status}")
         
         # Save HTML for debugging if status is weird or empty results
@@ -66,31 +61,35 @@ class BookingSpider(scrapy.Spider):
 
         sel = Selector(text=response.text)
 
-        titres = sel.css('div[data-testid="title"]::text').getall()
-        urls = sel.css('a[data-testid="title-link"]::attr(href)').getall()
-        scores = sel.xpath('//div[@data-testid="review-score"]/div[@aria-hidden="true"]/text()').getall()
-        
-        self.log(f"Found {len(titres)} hotels for {city}")
+        # Iterate over cards to inspect data individually
+        cards = sel.css('div[data-testid="property-card"]')
+        self.log(f"Found {len(cards)} cards for {city}")
 
-        for t, u, s in zip(titres, urls, scores):
-            # Log first hotel to check data
-            if t == titres[0]:
-                 self.log(f"Sample hotel: {t} - {u[:30]}...")
-
-            dict_hotels = {
-                "city": city,
-                "name": t,
-                "url": u,
-                "score": s
-            }   
+        for card in cards:
+            # Extract basic info
+            name = card.css('div[data-testid="title"]::text').get()
+            url = card.css('a[data-testid="title-link"]::attr(href)').get()
+            score = card.xpath('.//div[@data-testid="review-score"]/div[@aria-hidden="true"]/text()').get()
             
-            # Use yield request to go to details
-            yield scrapy.Request(u, callback=self.parse_detail, cb_kwargs={'name': t, 'score': s, 'city': city})
+            # Extract Address/Location from card
+            # Booking often puts the city/location in a specific span or link
+            # We look for the address text data-testid="address"
+            address_text = card.css('[data-testid="address"]::text').get()
+            
+            # Fallback if address is not explicitly found, use distance as heuristic?
+            # Better: Check if address contains city name
+            if address_text and city.lower() not in address_text.lower():
+                self.log(f"Skipping {name} (Location: {address_text}) - Not in {city}")
+                continue
+                
+            if url:
+                yield scrapy.Request(url, callback=self.parse_detail, cb_kwargs={'name': name, 'score': score, 'city': city}, meta={"playwright": True})
+
     
-    def parse_detail(self, response, name, score, city):
+    async def parse_detail(self, response, name, score, city):
         self.log(f"Detail page for {name} - Status: {response.status}")
         sel = Selector(text=response.text)
-        
+
         # Extract Lat/Lng
         lat_lng = sel.css('a[id="map_trigger_header"]::attr(data-atlas-latlng)').get()
         lat, lng = None, None
@@ -110,6 +109,6 @@ class BookingSpider(scrapy.Spider):
             "score": score,
             "lat": lat,
             "lng": lng,
-            "description": description[:200] # Truncate for cleaner JSON
+            "description": description
         }  
         yield dict_hotels
