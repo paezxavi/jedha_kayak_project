@@ -1,0 +1,3 @@
+Commenting
+.gitignore without .env
+Introduction to the project at the top of kayak.ipynb
