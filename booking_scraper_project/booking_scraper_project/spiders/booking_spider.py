@@ -1,11 +1,14 @@
-import os
-import logging
 import csv
 import datetime
 import urllib.parse
+from pathlib import Path
+
 import scrapy
 from scrapy import Selector
 from scrapy_playwright.page import PageMethod
+
+# spiders/ -> booking_scraper_project/ -> booking_scraper_project/ -> repo root
+CITIES_CSV = Path(__file__).resolve().parents[3] / "cities_with_geoposition.csv"
 
 
 class BookingSpider(scrapy.Spider):
@@ -23,31 +26,15 @@ class BookingSpider(scrapy.Spider):
         checkin_str = checkin_date.strftime('%Y-%m-%d')
         checkout_str = checkout_date.strftime('%Y-%m-%d')
 
-        cities = []
-        
-        try:
-            # 1. Try current directory (rare if running from spider dir)
-            with open('cities_with_geoposition.csv', mode='r', encoding='utf-8') as f:
-                reader = csv.DictReader(f)
-                for row in reader:
-                    cities.append(row['city'])
-        except FileNotFoundError:
-            try:
-                # 2. Try one level up (Common: running from booking_scraper_project root)
-                with open('../cities_with_geoposition.csv', mode='r', encoding='utf-8') as f:
-                    reader = csv.DictReader(f)
-                    for row in reader:
-                        cities.append(row['city'])
-            except FileNotFoundError:
-                try: 
-                    # 3. Try two levels up (Just in case)
-                    with open('../../cities_with_geoposition.csv', mode='r', encoding='utf-8') as f:
-                        reader = csv.DictReader(f)
-                        for row in reader:
-                            cities.append(row['city'])
-                except FileNotFoundError:
-                    print("⚠️ CSV file not found (tried '.', '..', '../..'). Using default list.")
-                    cities = ["Mont Saint Michel", "St Malo", "Bayeux", "Le Havre", "Rouen", "Paris", "Amiens", "Lille", "Strasbourg", "Chateau du Haut Koenigsbourg", "Colmar", "Eguisheim", "Besancon", "Dijon", "Annecy", "Grenoble", "Lyon", "Gorges du Verdon", "Bormes les Mimosas", "Cassis", "Marseille", "Aix en Provence", "Avignon", "Uzes", "Nimes", "Aigues Mortes", "Saintes Maries de la mer", "Collioure", "Carcassonne", "Ariege", "Toulouse", "Montauban", "Biarritz", "Bayonne", "La Rochelle"]
+        # Anchored on __file__, not the working directory, so the crawl can be
+        # launched from anywhere -- the notebook runs it from the project root,
+        # the CLI from booking_scraper_project/.
+        #
+        # No fallback list on purpose: the CSV is written by the geolocation step
+        # of the notebook, and without it the hotels could not be tied back to a
+        # city anyway. Missing file must stop the crawl, not start a silent one.
+        with open(CITIES_CSV, mode='r', encoding='utf-8') as f:
+            cities = [row['city'] for row in csv.DictReader(f)]
 
         print(f"Starting crawl for {len(cities)} cities: {cities}")
 
