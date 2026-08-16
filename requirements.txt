@@ -1,0 +1,22 @@
+# Kayak — ETL : scraping + APIs → data lake (Cloudflare R2) → data warehouse (PostgreSQL)
+# Install with:  python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+# Then:          .venv/bin/playwright install chromium   (browser used by the spider)
+
+# --- Notebook & data manipulation ---
+pandas==3.0.5
+requests==2.34.2            # Nominatim (geocoding) & OpenWeatherMap (forecast) calls
+plotly==6.9.0               # the two deliverable maps (top cities / top hotels)
+nbformat==5.11.0            # required by plotly to render figures inside the notebook
+ipykernel==7.3.0            # Jupyter kernel for kayak.ipynb
+
+# --- Scraping Booking.com ---
+Scrapy==2.17.0
+scrapy-playwright==0.0.48   # Booking renders its results in JS: a headless browser is needed
+scrapy-user-agents==0.1.1   # rotates the User-Agent to limit blocking
+playwright==1.62.0          # pulled in by scrapy-playwright, pinned here for reproducibility
+
+# --- Storage ---
+python-dotenv==1.2.2        # loads credentials from .env (never committed)
+boto3==1.43.72              # S3 API — used against Cloudflare R2 (S3-compatible endpoint)
+SQLAlchemy==2.0.52          # loads the cleaned CSVs into the data warehouse
+psycopg2-binary==2.9.12     # PostgreSQL driver used by SQLAlchemy

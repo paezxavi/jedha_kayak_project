@@ -1,5 +1,7 @@
 .env
+.venv/
 __pycache__/
 *.pyc
 .ipynb_checkpoints/
 final_output/
+jedha_kayak__instructions.ipynb
