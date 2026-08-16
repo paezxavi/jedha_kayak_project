@@ -58,17 +58,22 @@ class BookingSpider(scrapy.Spider):
     
 
     async def parse(self, response, city):
-        self.log(f"Parsing results for {city} - Status: {response.status}")
-        
+        # logger.info, not self.log: Spider.log defaults to DEBUG, and the run
+        # log is kept at INFO. At DEBUG these few lines would be buried under
+        # scrapy-playwright's per-subresource output -- 99% of a 520k-line file
+        # on the 2026-08-16 crawl, and the reason a 123 MB log was needed to
+        # answer a question these 900 lines answer on their own.
+        self.logger.info(f"Parsing results for {city} - Status: {response.status}")
+
         # Save HTML for debugging if status is weird or empty results
         if response.status != 200:
-             self.log(f"⚠️ Weird status code {response.status} for {city}")
+             self.logger.warning(f"⚠️ Weird status code {response.status} for {city}")
 
         sel = Selector(text=response.text)
 
         # Iterate over cards to inspect data individually
         cards = sel.css('div[data-testid="property-card"]')
-        self.log(f"Found {len(cards)} cards for {city}")
+        self.logger.info(f"Found {len(cards)} cards for {city}")
 
         for card in cards:
             # Extract basic info
@@ -84,7 +89,7 @@ class BookingSpider(scrapy.Spider):
             # Fallback if address is not explicitly found, use distance as heuristic?
             # Better: Check if address contains city name
             if address_text and city.lower() not in address_text.lower():
-                self.log(f"Skipping {name} (Location: {address_text}) - Not in {city}")
+                self.logger.info(f"Skipping {name} (Location: {address_text}) - Not in {city}")
                 continue
                 
             if url:
@@ -92,7 +97,7 @@ class BookingSpider(scrapy.Spider):
 
     
     async def parse_detail(self, response, name, score, city):
-        self.log(f"Detail page for {name} - Status: {response.status}")
+        self.logger.info(f"Detail page for {name} - Status: {response.status}")
         sel = Selector(text=response.text)
 
         # Extract Lat/Lng

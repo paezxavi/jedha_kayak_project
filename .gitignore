@@ -5,3 +5,6 @@ __pycache__/
 .ipynb_checkpoints/
 final_output/
 jedha_kayak__instructions.ipynb
+
+# Scrapy run logs: one file per crawl, useful locally, noise in the repo
+logs/

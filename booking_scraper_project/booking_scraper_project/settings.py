@@ -7,12 +7,41 @@
 #     https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
 #     https://docs.scrapy.org/en/latest/topics/spider-middleware.html
 
+from datetime import datetime
+from pathlib import Path
+
 BOT_NAME = "booking_scraper_project"
 
 SPIDER_MODULES = ["booking_scraper_project.spiders"]
 NEWSPIDER_MODULE = "booking_scraper_project.spiders"
 
 ADDONS = {}
+
+# Logging to a file rather than to the console.
+#
+# The crawl of 2026-08-16 finished and wrote a valid hotels.json, but one city
+# (Annecy) came back empty and the reason was unrecoverable: the whole Scrapy
+# output had gone to a notebook cell, which was lost when the window closed.
+# A log on disk is the only thing that survives the run.
+#
+# INFO, with the spider's own messages raised to INFO to match (Spider.log
+# defaults to DEBUG, so LOG_LEVEL alone would have silenced the very lines that
+# identify a failed city). Measured on the 2026-08-16 crawl: of 520,199 lines,
+# 514,954 came from scrapy-playwright logging every image, XHR and tracking
+# ping of every page -- 99% noise for a 123 MB file. The 943 spider lines that
+# did the diagnostic work survive here, in well under 1 MB.
+LOG_LEVEL = "INFO"
+
+# settings.py -> booking_scraper_project/ -> booking_scraper_project/ -> repo root
+# Anchored on __file__ like the spider's CITIES_CSV, so the log lands in the
+# same place whether the crawl is launched from the repo root or from the
+# scrapy project directory.
+_LOG_DIR = Path(__file__).resolve().parents[2] / "logs"
+_LOG_DIR.mkdir(parents=True, exist_ok=True)
+
+# One file per run: overwriting would destroy the previous run's evidence at
+# the very moment a comparison between two runs becomes useful.
+LOG_FILE = str(_LOG_DIR / f"booking_spider_{datetime.now():%Y%m%d_%H%M%S}.log")
 
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
 USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
