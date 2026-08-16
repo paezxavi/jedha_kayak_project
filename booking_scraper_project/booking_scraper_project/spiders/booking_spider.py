@@ -12,10 +12,11 @@ class BookingSpider(scrapy.Spider):
     # Name of your spider
     name = "booking_spider"
 
-    def start_requests(self):
+    # Replaces start_requests(), removed in Scrapy 2.17
+    async def start(self):
         # Calculate dates
         today = datetime.date.today()
-        # Shift to next month (e.g. +30 days) to find more availability
+        # Search a month ahead: Booking returns far more available properties
         checkin_date = today + datetime.timedelta(days=30)
         checkout_date = checkin_date + datetime.timedelta(days=5)
         
