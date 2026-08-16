@@ -7,6 +7,8 @@ pandas==3.0.5
 requests==2.34.2            # Nominatim (geocoding) & OpenWeatherMap (forecast) calls
 plotly==6.9.0               # the two deliverable maps (top cities / top hotels)
 nbformat==5.11.0            # required by plotly to render figures inside the notebook
+kaleido==1.3.0            # static PNG export of the maps -- GitHub renders no plotly output
+                            # (needs a Chrome: .venv/bin/plotly_get_chrome)
 ipykernel==7.3.0            # Jupyter kernel for kayak.ipynb
 
 # --- Scraping Booking.com ---
