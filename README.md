@@ -71,7 +71,7 @@ standard.
 
 ## Results
 
-Run of 2026-08-16 — 35 cities, 210 daily forecasts, 853 hotels, no orphan foreign key.
+Run of 2026-08-16 — 35 cities, 210 daily forecasts, 859 hotels, no orphan foreign key.
 
 ![Top 5 destinations](images/top5_destinations.png)
 
@@ -129,8 +129,23 @@ python3 -m venv .venv
 cp .env.example .env                    # then fill it in
 ```
 
-Then run `kayak.ipynb` top to bottom. The scraping cell is the long one; every cell after it can
-be replayed from the committed checkpoints without touching it.
+Then run `kayak.ipynb` from the top. One step is deliberately **not** run from the notebook — the
+Booking crawl:
+
+```bash
+cd booking_scraper_project
+scrapy crawl booking_spider -O ../hotels.json
+```
+
+Streaming an hour of Scrapy output into a single notebook cell is what breaks the notebook↔kernel
+channel. On 2026-08-16 the crawl itself finished and wrote a valid `hotels.json`, but VS Code could
+no longer even deliver an interrupt to a kernel that had already gone idle. The data was safe on
+disk; what was lost was the output — and with it the only record of why one city had come back
+empty. The crawl now runs in a terminal and writes to `logs/booking_spider_<timestamp>.log`, one
+file per run; the notebook cell merely checks that `hotels.json` exists and reports when it was
+crawled.
+
+Every cell after it replays from the committed checkpoints without touching the crawl.
 
 ## Stack
 

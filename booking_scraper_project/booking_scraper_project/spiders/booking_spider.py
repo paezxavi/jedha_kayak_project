@@ -58,11 +58,8 @@ class BookingSpider(scrapy.Spider):
     
 
     async def parse(self, response, city):
-        # logger.info, not self.log: Spider.log defaults to DEBUG, and the run
-        # log is kept at INFO. At DEBUG these few lines would be buried under
-        # scrapy-playwright's per-subresource output -- 99% of a 520k-line file
-        # on the 2026-08-16 crawl, and the reason a 123 MB log was needed to
-        # answer a question these 900 lines answer on their own.
+        # self.logger.info, not self.log: Spider.log() defaults to DEBUG, and the
+        # run log is kept at INFO (see settings.py).
         self.logger.info(f"Parsing results for {city} - Status: {response.status}")
 
         # Save HTML for debugging if status is weird or empty results

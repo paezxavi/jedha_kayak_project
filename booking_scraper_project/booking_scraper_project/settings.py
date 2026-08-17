@@ -17,19 +17,12 @@ NEWSPIDER_MODULE = "booking_scraper_project.spiders"
 
 ADDONS = {}
 
-# Logging to a file rather than to the console.
+# Logging to a file rather than to the console: a 55-minute crawl must leave a
+# trace that outlives the terminal that ran it.
 #
-# The crawl of 2026-08-16 finished and wrote a valid hotels.json, but one city
-# (Annecy) came back empty and the reason was unrecoverable: the whole Scrapy
-# output had gone to a notebook cell, which was lost when the window closed.
-# A log on disk is the only thing that survives the run.
-#
-# INFO, with the spider's own messages raised to INFO to match (Spider.log
-# defaults to DEBUG, so LOG_LEVEL alone would have silenced the very lines that
-# identify a failed city). Measured on the 2026-08-16 crawl: of 520,199 lines,
-# 514,954 came from scrapy-playwright logging every image, XHR and tracking
-# ping of every page -- 99% noise for a 123 MB file. The 943 spider lines that
-# did the diagnostic work survive here, in well under 1 MB.
+# INFO rather than DEBUG, where scrapy-playwright logs every image and XHR of
+# every page -- 99% of the volume. Note that Spider.log() defaults to DEBUG, so
+# the spider uses self.logger.info() to stay visible at this level.
 LOG_LEVEL = "INFO"
 
 # settings.py -> booking_scraper_project/ -> booking_scraper_project/ -> repo root
@@ -39,8 +32,8 @@ LOG_LEVEL = "INFO"
 _LOG_DIR = Path(__file__).resolve().parents[2] / "logs"
 _LOG_DIR.mkdir(parents=True, exist_ok=True)
 
-# One file per run: overwriting would destroy the previous run's evidence at
-# the very moment a comparison between two runs becomes useful.
+# One file per run: overwriting would destroy the previous run's evidence just
+# when comparing two runs becomes useful.
 LOG_FILE = str(_LOG_DIR / f"booking_spider_{datetime.now():%Y%m%d_%H%M%S}.log")
 
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
