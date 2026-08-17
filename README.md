@@ -75,8 +75,16 @@ Run of 2026-08-16 — 35 cities, 210 daily forecasts, 859 hotels, no orphan fore
 
 ![Top 5 destinations](images/top5_destinations.png)
 
-Bayonne (90.0), Biarritz (88.8), La Rochelle (86.3), Saintes Maries de la Mer (85.0) and Cassis
-(84.9). The ranking moves with the forecast: it is a snapshot, not a verdict on the cities.
+La Rochelle (87.9), Bayonne (85.7), Paris (84.3), Amiens (84.2) and Biarritz (84.2).
+
+The ranking is a snapshot, not a verdict on the cities — and this run proves it. An earlier pull
+the same morning put Bayonne, Biarritz, La Rochelle, Saintes Maries de la Mer and Cassis on the
+podium; six hours later, with a refreshed forecast, three of the five had changed. That is the
+pipeline working as intended, not a defect.
+
+Cities are ranked on the **mean** of their daily scores, which is what keeps the ranking honest.
+On this same run, Ariège reaches 94.6 on its best day — 4th nationally — but falls to 61.1 two
+days later, for a mean of 71.8 and a 27th place. La Rochelle never drops below 82.4.
 
 ![Top 20 hotels](images/top20_hotels.png)
 
